@@ -546,7 +546,7 @@ int tsp_solve(const Matrix& w)
   TSPSolver* solver = nullptr;
   if (n <= 10) {
     solver = new HeldKarpSolver(w);
-  } else if (n <= 30) {
+  } else if (n <= 15) {
     if (density >= 0.5) {
       solver = new TwoStepGreedySolver(w);
     } else {
@@ -564,7 +564,7 @@ int tsp_solve(const Matrix& w)
     auto [best_cost, tour] = solver->solve(0);
     print_result(best_cost, tour);
   }
-  else print_result(-2, {});
+  else print_result(-1, {});
   return 0;
 }
 
