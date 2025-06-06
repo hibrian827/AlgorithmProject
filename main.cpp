@@ -12,6 +12,8 @@
 //============================================================================
 
 #include <bits/stdc++.h>
+#include <cfloat>
+#include <random>
 using namespace std;
 
 /*=====================  LOCKED SECTION  (do not edit)  =====================*/
@@ -93,7 +95,6 @@ public:
   using TSPSolver::TSPSolver;
 
   pair<long long, vector<int>> solve(int start = 0) override {
-    const long long INF = numeric_limits<long long>::max() / 2;
     int FULL = (1 << n);
     vector<vector<long long>> dp(FULL, vector<long long>(n, INF));
     vector<vector<int>> parent(FULL, vector<int>(n, -1));
@@ -146,73 +147,75 @@ public:
   }
 };
 
+
 class SimulatedAnnealingSolver : public TSPSolver {
 public:
-  using TSPSolver::TSPSolver;
+  explicit SimulatedAnnealingSolver(const Matrix& w) : TSPSolver(w), rng(random_device{}()) {}
 
   pair<long long, vector<int>> solve(int start = 0) override {
-    const long long INF = numeric_limits<long long>::max() / 2;
+    vector<int> current = initial_solution(start);
+    vector<int> best = current;
 
-    // Random engine
-    mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
-    uniform_real_distribution<double> real_dist(0.0, 1.0);
+    long long current_cost = tour_cost(current);
+    long long best_cost = current_cost;
 
-    // Initial tour (0 → 1 → 2 → ... → n-1 → 0)
-    vector<int> current_tour(n);
-    iota(current_tour.begin(), current_tour.end(), 0);
+    double T = DBL_MAX;
+    double alpha = 0.999999;
 
-    auto tour_cost = [&](const vector<int>& tour) -> long long {
-      long long cost = 0;
-      for (int i = 0; i < n; ++i) {
-        int from = tour[i];
-        int to = tour[(i + 1) % n];
-        if (W[from][to] >= INF) return INF;
-        cost += W[from][to];
-      }
-      return cost;
-    };
+    uniform_real_distribution<double> prob_dist(0.0, 1.0);
 
-    auto swap_two = [&](vector<int>& tour) {
-      int i = rng() % n;
-      int j = rng() % n;
-      while (j == i) j = rng() % n;
-      swap(tour[i], tour[j]);
-    };
+    while (T > 1e-5) {
+      vector<int> neighbor = generate_neighbor(current);
+      long long neighbor_cost = tour_cost(neighbor);
+      long long delta = neighbor_cost - current_cost;
 
-    // Parameters
-    double T = 10000.0;
-    double cooling_rate = 0.995;
-    int iterations_per_temp = 100;
+      if (delta < 0 || prob_dist(rng) < exp(-delta / T)) {
+        current = neighbor;
+        current_cost = neighbor_cost;
 
-    vector<int> best_tour = current_tour;
-    long long best_cost = tour_cost(current_tour);
-
-    while (T > 1e-4) {
-      for (int it = 0; it < iterations_per_temp; ++it) {
-        vector<int> new_tour = current_tour;
-        swap_two(new_tour);
-        long long new_cost = tour_cost(new_tour);
-        long long curr_cost = tour_cost(current_tour);
-
-        double acceptance_prob = exp((curr_cost - new_cost) / T);
-
-        if (new_cost < curr_cost || real_dist(rng) < acceptance_prob) {
-          current_tour = new_tour;
-          if (new_cost < best_cost) {
-            best_cost = new_cost;
-            best_tour = new_tour;
-          }
+        if (current_cost < best_cost) {
+          best = current;
+          best_cost = current_cost;
         }
       }
-      T *= cooling_rate;
+
+      T *= alpha;
     }
 
-    // Ensure the tour starts at `start`
-    auto it = find(best_tour.begin(), best_tour.end(), start);
-    rotate(best_tour.begin(), it, best_tour.end());
-    best_tour.push_back(start); // complete the cycle
+    cout << best_cost << endl;
+    print_result(100, best);
+    return {best_cost, best};
+  }
 
-    return {best_cost, best_tour};
+private:
+  mt19937 rng;
+
+  vector<int> initial_solution(int start) {
+    vector<int> path(n);
+    iota(path.begin(), path.end(), 0);
+    shuffle(path.begin() + 1, path.end(), rng);
+    path.push_back(start);
+    return path;
+  }
+
+  long long tour_cost(const vector<int>& path) const {
+    long long cost = 0;
+    for (int i = 0; i <= n; ++i) {
+      int from = path[i];
+      int to = path[(i + 1) % n];
+      cost += W[from][to];
+    }
+    return cost;
+  }
+
+  vector<int> generate_neighbor(const vector<int>& path) {
+    vector<int> neighbor = path;
+    uniform_int_distribution<int> dist(1, n - 1);
+    int i = dist(rng), j = dist(rng);
+    while (i == j) j = dist(rng);
+    if (i > j) swap(i, j);
+    reverse(neighbor.begin() + i, neighbor.begin() + j + 1);
+    return neighbor;
   }
 };
 
@@ -221,7 +224,6 @@ public:
   using TSPSolver::TSPSolver;
 
   vector<pair<int, int>> primMST(const Matrix& W, int skip) {
-    const long long INF = numeric_limits<long long>::max() / 2;
     int n = W.size();
     vector<bool> inMST(n, false);
     vector<long long> key(n, INF);
@@ -358,7 +360,6 @@ public:
 
 private:
   vector<pair<int, int>> primMST() {
-    const long long INF = numeric_limits<long long>::max() / 2;
     vector<long long> key(n, INF);
     vector<int> parent(n, -1);
     vector<bool> inMST(n, false);
@@ -394,7 +395,6 @@ private:
 
   // Greedy matching — not guaranteed MWPM, but fast
   vector<pair<int, int>> greedyPerfectMatching(vector<int> nodes) {
-    const long long INF = numeric_limits<long long>::max() / 2;
     vector<pair<int, int>> matching;
     vector<bool> used(n, false);
     sort(nodes.begin(), nodes.end());
@@ -433,6 +433,72 @@ private:
   }
 };
 
+class TwoOptSolver : public TSPSolver {
+public:
+  using TSPSolver::TSPSolver;
+
+  pair<long long, vector<int>> solve(int start = 0) override {
+    // Generate initial tour using Nearest Neighbor
+    vector<int> tour = nearestNeighbor(start);
+    long long best_cost = tourCost(tour);
+
+    // Repeat 2-opt until no improvement
+    bool improved;
+    do {
+      improved = false;
+      for (int i = 1; i < n - 1; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+          vector<int> new_tour = tour;
+          reverse(new_tour.begin() + i, new_tour.begin() + j + 1);
+          long long new_cost = tourCost(new_tour);
+          if (new_cost < best_cost) {
+            tour = new_tour;
+            best_cost = new_cost;
+            improved = true;
+            goto restart_loop; // restart loop from beginning
+          }
+        }
+      }
+    restart_loop:;
+    } while (improved);
+
+    tour.push_back(tour.front()); // complete the cycle
+    return {best_cost, tour};
+  }
+
+private:
+  vector<int> nearestNeighbor(int start) {
+    vector<bool> visited(n, false);
+    vector<int> tour;
+    int curr = start;
+    tour.push_back(curr);
+    visited[curr] = true;
+
+    for (int i = 1; i < n; ++i) {
+      int next = -1;
+      long long best = numeric_limits<long long>::max();
+      for (int j = 0; j < n; ++j) {
+        if (!visited[j] && W[curr][j] < best) {
+          best = W[curr][j];
+          next = j;
+        }
+      }
+      tour.push_back(next);
+      visited[next] = true;
+      curr = next;
+    }
+    return tour;
+  }
+
+  long long tourCost(const vector<int>& tour) {
+    long long cost = 0;
+    for (int i = 0; i < (int)tour.size() - 1; ++i)
+      cost += W[tour[i]][tour[i + 1]];
+    cost += W[tour.back()][tour.front()]; // return to start
+    return cost;
+  }
+};
+
 int tsp_solve(const Matrix& w)
 {
   // Create and use implemented solvers
@@ -462,22 +528,19 @@ int tsp_solve(const Matrix& w)
 
   // Decision logic
   TSPSolver* solver = nullptr;
-  if (n <= 5) {
-    solver = new HeldKarpSolver(w);
-  } else if (n <= 30) {
-    if (density > 0.8) {
-      solver = new SimulatedAnnealingSolver(w);
+  if (n <= 10) {
+    // solver = new HeldKarpSolver(w);
+  } else if (n <= 15) {
+    if (density >= 0.5) {
+      // solver = new TwoStepGreedySolver(w);
     } else {
-      // solver = new OneTreeSparsifierSolver(w);
-      solver = new SimulatedAnnealingSolver(w);
+      // solver = new SimulatedAnnealingSolver(w);
     }
   } else {
-    if (density > 0.8) {
-      solver = new ChristofidesSolver(w);
+    if (density >= 0.5) {
+      // solver = new ChristofidesSolver(w);
     } else {
-      solver = new ChristofidesSolver(w);
-      // TODO
-      // Sparse and large: using Ant Colony with pruning or hierarchical strategy
+      solver = new SimulatedAnnealingSolver(w);
     }
   }
 
@@ -485,7 +548,7 @@ int tsp_solve(const Matrix& w)
     auto [best_cost, tour] = solver->solve(0);
     print_result(best_cost, tour);
   }
-  else print_result(-1, {});
+  else print_result(-2, {});
   return 0;
 }
 

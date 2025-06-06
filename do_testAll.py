@@ -26,6 +26,7 @@ for filename in sorted(os.listdir(test_folder)):
 
   start_time = time.time()
   try:
+    print(f"[*] testing {filename}")
     result = subprocess.run(
       ["./tsp", filepath],
       capture_output=True,
