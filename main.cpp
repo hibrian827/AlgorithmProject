@@ -159,12 +159,14 @@ public:
     long long current_cost = tour_cost(current);
     long long best_cost = current_cost;
 
-    double T = DBL_MAX;
-    double alpha = 0.999999;
-
+    double T = 1e20;
+    double alpha = 0.99999;
+    int max_iter = 1000;
+    
+    int iter = 0;
     uniform_real_distribution<double> prob_dist(0.0, 1.0);
 
-    while (T > 1e-5) {
+    while (T > 1e-100 && iter < max_iter) {
       vector<int> neighbor = generate_neighbor(current);
       long long neighbor_cost = tour_cost(neighbor);
       long long delta = neighbor_cost - current_cost;
@@ -179,11 +181,11 @@ public:
         }
       }
 
+      if(best_cost < INF) iter++;
       T *= alpha;
     }
+    best.push_back(start);
 
-    cout << best_cost << endl;
-    print_result(100, best);
     return {best_cost, best};
   }
 
@@ -191,16 +193,30 @@ private:
   mt19937 rng;
 
   vector<int> initial_solution(int start) {
-    vector<int> path(n);
-    iota(path.begin(), path.end(), 0);
-    shuffle(path.begin() + 1, path.end(), rng);
-    path.push_back(start);
-    return path;
+    vector<bool> visited(n, false);
+    vector<int> tour;
+    tour.push_back(start);
+    visited[start] = true;
+
+    for (int i = 1; i < n; ++i) {
+      int last = tour.back();
+      int next = -1;
+      int best_dist = INF + 1;
+      for (int j = 0; j < n; ++j) {
+        if (!visited[j] && W[last][j] < best_dist) {
+          best_dist = W[last][j];
+          next = j;
+        }
+      }
+      tour.push_back(next);
+      visited[next] = true;
+    }
+    return tour;
   }
 
   long long tour_cost(const vector<int>& path) const {
     long long cost = 0;
-    for (int i = 0; i <= n; ++i) {
+    for (int i = 0; i < n; ++i) {
       int from = path[i];
       int to = path[(i + 1) % n];
       cost += W[from][to];
@@ -529,16 +545,16 @@ int tsp_solve(const Matrix& w)
   // Decision logic
   TSPSolver* solver = nullptr;
   if (n <= 10) {
-    // solver = new HeldKarpSolver(w);
-  } else if (n <= 15) {
+    solver = new HeldKarpSolver(w);
+  } else if (n <= 30) {
     if (density >= 0.5) {
-      // solver = new TwoStepGreedySolver(w);
+      solver = new TwoStepGreedySolver(w);
     } else {
-      // solver = new SimulatedAnnealingSolver(w);
+      solver = new SimulatedAnnealingSolver(w);
     }
   } else {
     if (density >= 0.5) {
-      // solver = new ChristofidesSolver(w);
+      solver = new ChristofidesSolver(w);
     } else {
       solver = new SimulatedAnnealingSolver(w);
     }
