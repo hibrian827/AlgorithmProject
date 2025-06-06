@@ -544,21 +544,24 @@ int tsp_solve(const Matrix& w)
 
   // Decision logic
   TSPSolver* solver = nullptr;
+  // if (n <= 10) {
+  //   solver = new HeldKarpSolver(w);
+  // } else if (n <= 15) {
+  //   if (density >= 0.5) {
+  //     solver = new TwoStepGreedySolver(w);
+  //   } else {
+  //     solver = new SimulatedAnnealingSolver(w);
+  //   }
+  // } else {
+  //   if (density >= 0.5) {
+  //     solver = new ChristofidesSolver(w);
+  //   } else {
+  //     solver = new SimulatedAnnealingSolver(w);
+  //   }
+  // }
   if (n <= 10) {
     solver = new HeldKarpSolver(w);
-  } else if (n <= 15) {
-    if (density >= 0.5) {
-      solver = new TwoStepGreedySolver(w);
-    } else {
-      solver = new SimulatedAnnealingSolver(w);
-    }
-  } else {
-    if (density >= 0.5) {
-      solver = new ChristofidesSolver(w);
-    } else {
-      solver = new SimulatedAnnealingSolver(w);
-    }
-  }
+  } else solver = new SimulatedAnnealingSolver(w);
 
   if(solver != nullptr) {
     auto [best_cost, tour] = solver->solve(0);
