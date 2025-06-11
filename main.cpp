@@ -184,8 +184,7 @@ public:
       if(best_cost < INF) iter++;
       T *= alpha;
     }
-    best.push_back(start);
-
+    
     bool improved = true;
     while (improved) {
       improved = false;
@@ -194,19 +193,20 @@ public:
           if (j == n - 1 && i == 0) continue; // prevent full reversal
           vector<int> new_tour = best;
           reverse(new_tour.begin() + i + 1, new_tour.begin() + j + 1);
-
+          
           long long new_cost = tour_cost(new_tour);
           if (new_cost < best_cost) {
-              best = new_tour;
-              best_cost = new_cost;
-              improved = true;
-              goto restart;
-            }
+            best = new_tour;
+            best_cost = new_cost;
+            improved = true;
+            goto restart;
           }
         }
+      }
       restart:;
     }
-
+    best.push_back(start);
+    
     return {best_cost, best};
   }
 
