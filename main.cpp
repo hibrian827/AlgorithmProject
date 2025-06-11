@@ -161,7 +161,7 @@ public:
 
     double T = 1e20;
     double alpha = 0.99999;
-    int max_iter = 5000000;
+    int max_iter = 5000;
     
     int iter = 0;
     uniform_real_distribution<double> prob_dist(0.0, 1.0);
@@ -185,6 +185,27 @@ public:
       T *= alpha;
     }
     best.push_back(start);
+
+    bool improved = true;
+    while (improved) {
+      improved = false;
+      for (int i = 0; i < n - 1; ++i) {
+        for (int j = i + 2; j < n; ++j) {
+          if (j == n - 1 && i == 0) continue; // prevent full reversal
+          vector<int> new_tour = best;
+          reverse(new_tour.begin() + i + 1, new_tour.begin() + j + 1);
+
+          long long new_cost = tour_cost(new_tour);
+          if (new_cost < best_cost) {
+              best = new_tour;
+              best_cost = new_cost;
+              improved = true;
+              goto restart;
+            }
+          }
+        }
+      restart:;
+    }
 
     return {best_cost, best};
   }
