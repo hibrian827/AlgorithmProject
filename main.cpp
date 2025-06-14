@@ -14,6 +14,7 @@
 #include <bits/stdc++.h>
 #include <cfloat>
 #include <random>
+#include <time.h>
 using namespace std;
 
 /*=====================  LOCKED SECTION  (do not edit)  =====================*/
@@ -147,6 +148,9 @@ public:
   }
 };
 
+double LIMIT = 2400000;
+double sum_time = 0;
+int task_num = 50;
 
 class SimulatedAnnealingSolver : public TSPSolver {
 public:
@@ -161,12 +165,14 @@ public:
 
     double T = 1e20;
     double alpha = 0.99999;
-    int max_iter = 12000000;
     
-    int iter = 0;
     uniform_real_distribution<double> prob_dist(0.0, 1.0);
+    double limit = (LIMIT - sum_time) / (double)task_num;
+    if (limit < 1) limit = 1;
+    auto start_time = clock();
 
-    while (T > 1e-100 && iter < max_iter) {
+    while (T > 1e-100) {
+      if((double)(clock() - start_time) >= limit) break;
       vector<int> neighbor = generate_neighbor(current);
       long long neighbor_cost = tour_cost(neighbor);
       long long delta = neighbor_cost - current_cost;
@@ -181,7 +187,6 @@ public:
         }
       }
 
-      if(best_cost < INF) iter++;
       T *= alpha;
     }
     
@@ -281,16 +286,20 @@ int tsp_solve(const Matrix& w)
   }
 
   // Decision logic
+  task_num--;
+  auto start = clock();
   TSPSolver* solver = nullptr;
   if (n <= 15) {
     solver = new HeldKarpSolver(w);
   } else solver = new SimulatedAnnealingSolver(w);
-
+  
   if(solver != nullptr) {
     auto [best_cost, tour] = solver->solve(0);
     print_result(best_cost, tour);
   }
   else print_result(-1, {});
+  auto finish = clock();
+  sum_time += (double)(finish - start);
   return 0;
 }
 
