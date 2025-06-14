@@ -14,7 +14,6 @@
 #include <bits/stdc++.h>
 #include <cfloat>
 #include <random>
-#include <time.h>
 using namespace std;
 
 /*=====================  LOCKED SECTION  (do not edit)  =====================*/
@@ -148,9 +147,6 @@ public:
   }
 };
 
-double LIMIT = 2400000;
-double sum_time = 0;
-int task_num = 50;
 
 class SimulatedAnnealingSolver : public TSPSolver {
 public:
@@ -165,14 +161,12 @@ public:
 
     double T = 1e20;
     double alpha = 0.99999;
+    int max_iter = 11000000;
     
+    int iter = 0;
     uniform_real_distribution<double> prob_dist(0.0, 1.0);
-    double limit = (LIMIT - sum_time) / (double)task_num;
-    if (limit < 1) limit = 1;
-    auto start_time = clock();
 
-    while (T > 1e-100) {
-      if((double)(clock() - start_time) >= limit) break;
+    while (T > 1e-100 && iter < max_iter) {
       vector<int> neighbor = generate_neighbor(current);
       long long neighbor_cost = tour_cost(neighbor);
       long long delta = neighbor_cost - current_cost;
@@ -187,31 +181,11 @@ public:
         }
       }
 
+      if(best_cost < INF) iter++;
       T *= alpha;
     }
-    
-    bool improved = true;
-    while (improved) {
-      improved = false;
-      for (int i = 0; i < n - 1; ++i) {
-        for (int j = i + 2; j < n; ++j) {
-          if (j == n - 1 && i == 0) continue; // prevent full reversal
-          vector<int> new_tour = best;
-          reverse(new_tour.begin() + i + 1, new_tour.begin() + j + 1);
-          
-          long long new_cost = tour_cost(new_tour);
-          if (new_cost < best_cost) {
-            best = new_tour;
-            best_cost = new_cost;
-            improved = true;
-            goto restart;
-          }
-        }
-      }
-      restart:;
-    }
     best.push_back(start);
-    
+
     return {best_cost, best};
   }
 
@@ -275,6 +249,7 @@ int tsp_solve(const Matrix& w)
   /* Improvement */
   int n = w.size();
   int non_inf_edges = 0;
+  int total_possible_edges = n * (n - 1);
 
   // Count the non-infinite, non-diagonal edges
   for (int i = 0; i < n; ++i) {
@@ -285,21 +260,19 @@ int tsp_solve(const Matrix& w)
     }
   }
 
+  double density = static_cast<double>(non_inf_edges) / total_possible_edges;
+
   // Decision logic
-  task_num--;
-  auto start = clock();
   TSPSolver* solver = nullptr;
-  if (n <= 15) {
+  if (n <= 10) {
     solver = new HeldKarpSolver(w);
   } else solver = new SimulatedAnnealingSolver(w);
-  
+
   if(solver != nullptr) {
     auto [best_cost, tour] = solver->solve(0);
     print_result(best_cost, tour);
   }
   else print_result(-1, {});
-  auto finish = clock();
-  sum_time += (double)(finish - start);
   return 0;
 }
 
