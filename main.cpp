@@ -161,7 +161,7 @@ public:
 
     double T = 1e20;
     double alpha = 0.99999;
-    int max_iter = 100000;
+    int max_iter = 12000000;
     
     int iter = 0;
     uniform_real_distribution<double> prob_dist(0.0, 1.0);
